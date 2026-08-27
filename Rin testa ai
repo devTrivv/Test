@@ -1,45 +1,26 @@
 local TweenService = game:GetService("TweenService")
 local rootPart = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
 
--- ======================================================================
--- CONFIGURAÇÃO DOS DESTINOS (Modifique aqui)
--- ======================================================================
-
--- Se você NÃO quiser um segundo destino, mude a linha abaixo para: local segundoDestino = nil
 local segundoDestino = workspace.FloorPart
 
--- Configuração do Tween (2 segundos de viagem)
 local info = TweenInfo.new(1, Enum.EasingStyle.Linear)
 
--- ======================================================================
--- LOOP: Varre a pasta de Slimes
--- ======================================================================
 while true do
   for _, area in pairs(workspace.ItemSpawns:GetChildren()) do
-    
-for i, v in pairs(area:GetChildren()) do 
-    
-    -- CORRIGIDO: Checa se o objeto ATUAL da lista se chama exatamente o que você quer
-    if v.Name == "SpawnedItem" and v:GetAttribute("Rarity") == "Secret" then
-        
-        -- O 'primeiroDestino' assume a identidade do Lucky Block encontrado
+    for i, v in pairs(area:GetChildren()) do 
+      if v.Name == "SpawnedItem" and v:GetAttribute("Rarity") == "Secret" then
         local primeiroDestino = v
 
-        -- ======================================================================
-        -- VIAGEM 1: Vai até o Soccer God Lucky Block atual
-        -- ======================================================================
         rootPart.Anchored = true 
 
         local animacao1 = TweenService:Create(rootPart, info, {CFrame = primeiroDestino:GetPivot()})
         animacao1:Play()
 
-        animacao1.Completed:Wait() -- Espera chegar no Lucky Block
+        animacao1.Completed:Wait() 
         rootPart.Anchored = false 
-        print("Cheguei no destino: " .. primeiroDestino.Name)
+        print("Arrived at destination: " .. primeiroDestino.Name)
         wait(0.5)
-    -- ======================================================================
-        -- PROMPT AUTOMÁTICO (Busca por texto e clica com o seu comando)
-        -- ======================================================================
+
         local p = nil
         for _, filho in pairs(primeiroDestino:GetDescendants()) do
             if string.find(string.lower(filho.Name), "prompt") then
@@ -49,33 +30,29 @@ for i, v in pairs(area:GetChildren()) do
         end
 
         if p then 
-            fireproximityprompt(p, 0) -- Usa a variável 'p' encontrada na busca
-            print("Prompt feito no bloco usando comando direto!")
+            fireproximityprompt(p, 0) 
+            print("Prompt executed on block using direct command!")
             task.wait(0.5)
         end
 
-        -- ======================================================================
-        -- CHECAGEM DO SEGUNDO DESTINO: SÓ EXECUTA SE ELE EXISTIR (Lobby)
-        -- ======================================================================
         if segundoDestino ~= nil then
-            print("Segundo destino detectado! Iniciando delay de espera...")
+            print("Second destination detected! Starting wait delay...")
             
-            task.wait(1) -- Espera 3 segundos antes de voltar ao lobby
+            task.wait(0.5) 
             
-            print("Indo para o segundo destino (Lobby)...")
+            print("Going to the second destination (Lobby)...")
             rootPart.Anchored = true 
             
             local animacao2 = TweenService:Create(rootPart, info, {CFrame = segundoDestino:GetPivot()})
             animacao2:Play()
             
-            animacao2.Completed:Wait() -- Espera chegar no Lobby
+            animacao2.Completed:Wait() 
             rootPart.Anchored = false 
-            print("Cheguei no segundo destino final!")
+            print("Arrived at the final second destination!")
         else
-            print("Nenhum segundo destino foi colocado para este item.")
+            print("No second destination was set for this item.")
         end
         
-        -- Pequena pausa após voltar ao lobby antes de procurar o PRÓXIMO Lucky Block da pasta
         task.wait(0.5) 
       end
     end
