@@ -1,0 +1,305 @@
+--[[
+    Pablo Hub - GUI ultra compacta e redonda
+]]
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+-- Remover GUI antiga
+if CoreGui:FindFirstChild("PabloHub") then
+    CoreGui:FindFirstChild("PabloHub"):Destroy()
+end
+
+-- Criar ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PabloHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = CoreGui
+
+-- Função para criar toggle compacto
+local function createToggle(parent, text, callback)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 30)
+    ToggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    ToggleFrame.BorderSizePixel = 0
+    ToggleFrame.Parent = parent
+    
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 10)
+    ToggleCorner.Parent = ToggleFrame
+    
+    local ToggleLabel = Instance.new("TextLabel")
+    ToggleLabel.Size = UDim2.new(0.65, 0, 1, 0)
+    ToggleLabel.Position = UDim2.new(0, 8, 0, 0)
+    ToggleLabel.BackgroundTransparency = 1
+    ToggleLabel.Font = Enum.Font.Gotham
+    ToggleLabel.Text = text
+    ToggleLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+    ToggleLabel.TextSize = 10
+    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleLabel.Parent = ToggleFrame
+    
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Size = UDim2.new(0, 30, 0, 15)
+    ToggleButton.Position = UDim2.new(1, -38, 0.5, -7)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    ToggleButton.BorderSizePixel = 0
+    ToggleButton.Text = ""
+    ToggleButton.AutoButtonColor = false
+    ToggleButton.Parent = ToggleFrame
+    
+    local ToggleCorner2 = Instance.new("UICorner")
+    ToggleCorner2.CornerRadius = UDim.new(0, 7)
+    ToggleCorner2.Parent = ToggleButton
+    
+    local ToggleDot = Instance.new("Frame")
+    ToggleDot.Size = UDim2.new(0, 11, 0, 11)
+    ToggleDot.Position = UDim2.new(0, 2, 0.5, -5)
+    ToggleDot.BackgroundColor3 = Color3.fromRGB(200, 200, 210)
+    ToggleDot.BorderSizePixel = 0
+    ToggleDot.Parent = ToggleButton
+    
+    local DotCorner = Instance.new("UICorner")
+    DotCorner.CornerRadius = UDim.new(0, 5)
+    DotCorner.Parent = ToggleDot
+    
+    local enabled = false
+    
+    ToggleButton.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        if enabled then
+            TweenService:Create(ToggleButton, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(80, 140, 255)}):Play()
+            TweenService:Create(ToggleDot, TweenInfo.new(0.15), {Position = UDim2.new(1, -13, 0.5, -5), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+        else
+            TweenService:Create(ToggleButton, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}):Play()
+            TweenService:Create(ToggleDot, TweenInfo.new(0.15), {Position = UDim2.new(0, 2, 0.5, -5), BackgroundColor3 = Color3.fromRGB(200, 200, 210)}):Play()
+        end
+        callback(enabled)
+    end)
+end
+
+-- Criar Frame principal (ultra compacto e redondo)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 200, 0, 130)
+MainFrame.Position = UDim2.new(0, 10, 0.5, -65)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+
+-- MUITO mais redondo
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 16)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(50, 50, 60)
+MainStroke.Thickness = 1
+MainStroke.Parent = MainFrame
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 24)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 16)
+TitleCorner.Parent = TitleBar
+
+-- Título
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0.6, 0, 1, 0)
+Title.Position = UDim2.new(0, 8, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Pablo hub"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+-- Botão Minimizar
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 18, 0, 18)
+MinimizeButton.Position = UDim2.new(1, -38, 0, 3)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.Text = "—"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 10
+MinimizeButton.Parent = TitleBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 9)
+MinCorner.Parent = MinimizeButton
+
+-- Botão Fechar
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 18, 0, 18)
+CloseButton.Position = UDim2.new(1, -18, 0, 3)
+CloseButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+CloseButton.BorderSizePixel = 0
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 9
+CloseButton.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 9)
+CloseCorner.Parent = CloseButton
+
+-- Container de conteúdo
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -10, 1, -48)
+ContentFrame.Position = UDim2.new(0, 5, 0, 26)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+ContentFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 3)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = ContentFrame
+
+-- Créditos no rodapé (BEM MAIOR, um pouco menor que o título)
+local CreditsBottom = Instance.new("TextLabel")
+CreditsBottom.Size = UDim2.new(1, 0, 0, 18)
+CreditsBottom.Position = UDim2.new(0, 0, 1, -18)
+CreditsBottom.BackgroundTransparency = 1
+CreditsBottom.Font = Enum.Font.GothamBold
+CreditsBottom.Text = "makes by pablo"
+CreditsBottom.TextColor3 = Color3.fromRGB(150, 140, 200)
+CreditsBottom.TextSize = 11
+CreditsBottom.Parent = MainFrame
+
+-- Toggle 1: Pegar melhores brainrots
+createToggle(ContentFrame, "Pegar melhores brainrots", function(Value)
+    getgenv().PegarBrainrots = Value
+    if Value then
+        task.spawn(function()
+            while getgenv().PegarBrainrots do
+                local rootPart = Player.Character:WaitForChild("HumanoidRootPart")
+                local segundoDestino = CFrame.new(141, -10, 4142)
+                local info = TweenInfo.new(0.5, Enum.EasingStyle.Linear)
+                
+                for _, obj in ipairs(workspace.Runtime:GetChildren()) do 
+                    if obj.Name == "ArenaBrainrot" then 
+                        local rarity = obj:FindFirstChild("Rarity", true)
+                        if rarity then
+                            local texto = string.lower(rarity.Text)
+                            if texto == "admin" or string.find(texto, "infinity") or string.find(texto, "exclusive") then
+                                
+                                rootPart.Anchored = false
+                                local animacao1 = TweenService:Create(rootPart, info, {CFrame = obj:GetPivot()})
+                                animacao1:Play()
+                                animacao1.Completed:Wait()
+                                task.wait(0.5)
+
+                                local p = nil
+                                for _, filho in pairs(obj:GetDescendants()) do
+                                    if string.find(string.lower(filho.Name), "prompt") then
+                                        p = filho
+                                        break
+                                    end
+                                end
+
+                                if p then 
+                                    fireproximityprompt(p, 0) 
+                                    task.wait(0.5)
+                                end
+
+                                if segundoDestino ~= nil then
+                                    local animacao2 = TweenService:Create(rootPart, info, {CFrame = segundoDestino})
+                                    animacao2:Play()
+                                    animacao2.Completed:Wait() 
+                                    rootPart.Anchored = true
+                                end
+                                task.wait(0.5)
+                            end
+                        end
+                    end 
+                end 
+                task.wait(0.5)
+                rootPart.Anchored = false
+            end
+        end)
+    end
+end)
+
+-- Toggle 2: Quebrar lucky blocks
+createToggle(ContentFrame, "Quebrar lucky blocks", function(Value)
+    getgenv().QuebrarLucky = Value
+    if Value then
+        task.spawn(function()
+            local Event = game:GetService("ReplicatedStorage").Remotes.Feature.PortalPresentHit
+            while getgenv().QuebrarLucky do
+                for _, obj in ipairs(workspace.Runtime:GetChildren()) do
+                    local model = obj:FindFirstChild("Model")
+                    if model then
+                        Event:FireServer(model)
+                        task.wait()
+                    end
+                end
+                task.wait()
+            end
+        end)
+    end
+end)
+
+-- Função para arrastar
+local dragging = false
+local dragStart, startPos
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Minimizar
+local minimized = false
+MinimizeButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        ContentFrame.Visible = false
+        CreditsBottom.Visible = false
+        MainFrame.Size = UDim2.new(0, 200, 0, 24)
+    else
+        ContentFrame.Visible = true
+        CreditsBottom.Visible = true
+        MainFrame.Size = UDim2.new(0, 200, 0, 130)
+    end
+end)
+
+-- Fechar
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
