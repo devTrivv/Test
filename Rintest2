@@ -9,7 +9,7 @@ local rootPart = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPa
 local segundoDestino = nil 
 
 -- Configuração do Tween (2 segundos de viagem)
-local info = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
+local info = TweenInfo.new(0.1, Enum.EasingStyle.Linear)
 
 -- ======================================================================
 -- [ ADIÇÃO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE
@@ -67,7 +67,7 @@ end)()
 -- ======================================================================
 
 -- ======================================================================
--- LOOP: Varre TODAS as Zones de 14 a 23 (COM VERIFICAÇÃO DE CARREGAMENTO)
+-- LOOP: Varre TODAS as Zones de 47 a 57 (COM VERIFICAÇÃO DE CARREGAMENTO)
 -- ======================================================================
 while true do
   
@@ -93,7 +93,7 @@ while true do
         end
         
         tentativas = tentativas + 1
-        task.wait(1)  -- Espera 1 segundo e tenta novamente
+        task.wait(0.1)  -- Espera 1 segundo e tenta novamente
     end
     
     -- Se encontrou o SpawnZone, processa
@@ -106,7 +106,7 @@ while true do
                 local primeiroDestino = v
 
                 -- ======================================================================
-                -- VIAGEM 1: Vai até o Slime Divino atual
+                -- VIAGEM 1: Vai até o Slime Genesis atual
                 -- ======================================================================
                 rootPart.Anchored = true 
 
@@ -116,7 +116,7 @@ while true do
                 animacao1.Completed:Wait()
                 rootPart.Anchored = false 
                 print("Cheguei no destino: " .. primeiroDestino.Name)
-                wait(0.5)
+                task.wait(0.5)  -- CORRIGIDO: wait -> task.wait
                 
                 -- ======================================================================
                 -- PROMPT AUTOMÁTICO
@@ -158,7 +158,7 @@ while true do
                     print("Nenhum segundo destino foi colocado para este item.")
                 end
                 
-                task.wait() 
+                task.wait(0.1)  -- CORRIGIDO: estava vazio, agora tem 0.5 segundos
                 
             end
         end
