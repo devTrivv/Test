@@ -1,171 +1,251 @@
 local TweenService = game:GetService("TweenService")
-local rootPart = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
 
 -- ======================================================================
 -- CONFIGURAÇÃO DOS DESTINOS (Modifique aqui)
 -- ======================================================================
-
--- Se você NÃO quiser um segundo destino, mude a linha abaixo para: local segundoDestino = nil
 local segundoDestino = nil 
 
--- Configuração do Tween (2 segundos de viagem)
-local info = TweenInfo.new(0.1, Enum.EasingStyle.Linear)
+-- Tween MUITO rápido (0.05 segundos)
+local info = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
 
 -- ======================================================================
--- [ ADIÇÃO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE
+-- SERVIÇOS
 -- ======================================================================
 local TeleportService = game:GetService("ReplicatedStorage").Packages._Index["acecateer_knit@1.7.2"].knit.Services.BaseTeleportService.RF.TeleportToSpawn
 local SellService = game:GetService("ReplicatedStorage").Packages._Index["acecateer_knit@1.7.2"].knit.Services.DataService.RF.SellAllBackpackLoot
 
 local podePegar = true
+local isTeleporting = false
 
--- Função para verificar se o inventário está cheio (funciona com qualquer número)
+-- ======================================================================
+-- FUNÇÃO PARA VERIFICAR INVENTÁRIO (COM PROTEÇÃO TOTAL)
+-- ======================================================================
 local function verificarInventario()
-    local backpack = game:GetService("Players").LocalPlayer.PlayerGui.MainScreenGui.Currencies.Backpack.Value
-    if backpack and backpack:IsA("TextLabel") then
+    local success, resultado = pcall(function()
+        local backpack = player.PlayerGui.MainScreenGui.Currencies.Backpack
+        
+        if not backpack then return false end
+        
         local texto = backpack.ContentText
-        if texto then
-            local partes = {}
-            for parte in string.gmatch(texto, "([^/]+)") do
-                table.insert(partes, parte)
-            end
-            if #partes == 2 then
-                local atual = tonumber(partes[1]) or 0
-                local maximo = tonumber(partes[2]) or 0
-                if atual >= maximo and maximo > 0 then
-                    return true
-                end
+        if not texto then return false end
+        
+        local atual, maximo = texto:match("(%d+)/(%d+)")
+        
+        if atual and maximo then
+            atual = tonumber(atual)
+            maximo = tonumber(maximo)
+            
+            if atual and maximo and maximo > 0 and atual >= maximo then
+                return true
             end
         end
+        
+        return false
+    end)
+    
+    if success then
+        return resultado
+    else
+        return false
     end
-    return false
 end
 
--- Loop de verificação contínua (executa em paralelo)
+-- ======================================================================
+-- FUNÇÃO PARA TELEPORTAR E VENDER (COM PROTEÇÃO TOTAL)
+-- ======================================================================
+local function teleportarEVender()
+    if isTeleporting then return end
+    isTeleporting = true
+    
+    print("[DETECTADO] Inventário cheio! Teleportando...")
+    podePegar = false
+    
+    -- Teleporte com proteção total
+    local success, erro = pcall(function()
+        TeleportService:InvokeServer()
+    end)
+    
+    if not success then
+        print("[ERRO] Falha no teleporte:", erro)
+    else
+        print("[SUCESSO] Teleportado!")
+    end
+    
+    task.wait(0.2)
+    
+    -- Venda com proteção total
+    success, erro = pcall(function()
+        SellService:InvokeServer()
+    end)
+    
+    if not success then
+        print("[ERRO] Falha na venda:", erro)
+    else
+        print("[SUCESSO] Vendido!")
+    end
+    
+    task.wait(0.2)
+    
+    podePegar = true
+    isTeleporting = false
+    print("[LIBERADO] Voltou a pegar!")
+end
+
+-- ======================================================================
+-- LOOP DE VERIFICAÇÃO DE INVENTÁRIO (PROTEGIDO)
+-- ======================================================================
 coroutine.wrap(function()
     while true do
-        if verificarInventario() and podePegar then
-            print("[DETECTADO] Inventário cheio! Teleportando para o spawn...")
-            podePegar = false
-            
-            local Result = table.pack(TeleportService:InvokeServer())
-            print("[TELEPORT] Teleportado para o spawn!")
-            
-            task.wait(0.5)
-            
-            print("[VENDA] Vendendo todo o inventário...")
-            SellService:InvokeServer()
-            print("[VENDA] Inventário vendido com sucesso!")
-            task.wait(0.5)
-            
-            podePegar = true
-            print("[LIBERADO] Volta a pegar Divine!")
-        end
-        task.wait(1)
-    end
-end)()
--- ======================================================================
-
--- ======================================================================
--- LOOP: Varre TODAS as Zones de 47 a 57 (COM VERIFICAÇÃO DE CARREGAMENTO)
--- ======================================================================
-while true do
-  
-  for zoneNumber = 47, 57 do
-    local zoneName = "Zone_" .. zoneNumber
-    
-    -- ======================================================================
-    -- VERIFICA SE O SPAWNZONE EXISTE (ESPERA CARREGAR SE NÃO EXISTIR)
-    -- ======================================================================
-    local spawnZone = nil
-    local tentativas = 0
-    local maxTentativas = 10  -- Tenta por até 10 segundos
-    
-    while tentativas < maxTentativas do
-        -- Tenta acessar o SpawnZone com proteção
-        local success, result = pcall(function()
-            return workspace.Zones.W5[zoneName].SpawnZone
+        local success, erro = pcall(function()
+            if verificarInventario() and podePegar and not isTeleporting then
+                teleportarEVender()
+            end
         end)
         
-        if success and result then
-            spawnZone = result
-            break  -- Encontrou! Sai do loop
+        if not success then
+            print("[ERRO NO LOOP DE INVENTÁRIO]:", erro)
         end
         
-        tentativas = tentativas + 1
-        task.wait(0.1)  -- Espera 1 segundo e tenta novamente
+        task.wait(0.3)
+    end
+end)()
+
+-- ======================================================================
+-- FUNÇÃO PARA MOVER COM TWEEN RÁPIDO (PROTEGIDA)
+-- ======================================================================
+local function moverParaDestino(destino)
+    local success, erro = pcall(function()
+        if not destino or not rootPart then return false end
+        
+        rootPart.Anchored = true
+        
+        local tween = TweenService:Create(rootPart, info, {CFrame = destino:GetPivot()})
+        tween:Play()
+        
+        tween.Completed:Wait()
+        rootPart.Anchored = false
+        
+        return true
+    end)
+    
+    if not success then
+        print("[ERRO NO MOVIMENTO]:", erro)
+        -- Tenta liberar o personagem caso tenha ficado travado
+        pcall(function()
+            if rootPart then
+                rootPart.Anchored = false
+            end
+        end)
+        return false
     end
     
-    -- Se encontrou o SpawnZone, processa
-    if spawnZone then
-        print("Varrendo: " .. zoneName .. " (carregado!)")
+    return resultado
+end
+
+-- ======================================================================
+-- LOOP PRINCIPAL (PROTEÇÃO TOTAL - NUNCA PARA)
+-- ======================================================================
+while true do
+    -- Proteção total do loop inteiro
+    local success, erro = pcall(function()
+        -- Verifica se o personagem ainda existe
+        if not character or not character.Parent then
+            character = player.Character or player.CharacterAdded:Wait()
+            rootPart = character:WaitForChild("HumanoidRootPart")
+        end
         
-        for i, v in pairs(spawnZone:GetChildren()) do
-            if podePegar and v:IsA("Model") and v:GetAttribute("LootRarity") == "Genesis" then
+        for zoneNumber = 47, 57 do
+            if not podePegar then break end
+            
+            local zoneName = "Zone_" .. zoneNumber
+            
+            -- Acesso à zona com proteção
+            local successZone, zone = pcall(function()
+                return workspace.Zones.W5[zoneName]
+            end)
+            
+            if not successZone or not zone then continue end
+            
+            local spawnZone = zone:FindFirstChild("SpawnZone")
+            
+            if not spawnZone then continue end
+            
+            -- Varre todos os filhos
+            for _, v in pairs(spawnZone:GetChildren()) do
+                if not podePegar then break end
                 
-                local primeiroDestino = v
-
-                -- ======================================================================
-                -- VIAGEM 1: Vai até o Slime Genesis atual
-                -- ======================================================================
-                rootPart.Anchored = true 
-
-                local animacao1 = TweenService:Create(rootPart, info, {CFrame = primeiroDestino:GetPivot()})
-                animacao1:Play()
-
-                animacao1.Completed:Wait()
-                rootPart.Anchored = false 
-                print("Cheguei no destino: " .. primeiroDestino.Name)
-                task.wait(0.5)  -- CORRIGIDO: wait -> task.wait
+                -- Verificação do item com proteção
+                local successItem, isGenesis = pcall(function()
+                    return v:IsA("Model") and v:GetAttribute("LootRarity") == "Genesis"
+                end)
                 
-                -- ======================================================================
-                -- PROMPT AUTOMÁTICO
-                -- ======================================================================
-                local p = nil
-                for _, filho in pairs(primeiroDestino:GetDescendants()) do
-                    if filho:IsA("ProximityPrompt") then
-                        p = filho
-                        break
-                    end
-                end
-
-                if p then 
-                    fireproximityprompt(p, 0)
-                    print("Prompt feito no bloco usando comando direto!")
+                if successItem and isGenesis then
+                    
+                    print("Indo para: " .. v.Name)
+                    
+                    -- Move com Tween rápido (já tem proteção interna)
+                    moverParaDestino(v)
+                    
                     task.wait(0.5)
-                else
-                    print("Nenhum ProximityPrompt encontrado em: " .. primeiroDestino.Name)
-                end
+                    
+                    -- PROMPT ORIGINAL (COM PROTEÇÃO)
+                    local successPrompt, erroPrompt = pcall(function()
+                        local p = nil
+                        for _, filho in pairs(v:GetDescendants()) do
+                            if filho:IsA("ProximityPrompt") then
+                                p = filho
+                                break
+                            end
+                        end
 
-                -- ======================================================================
-                -- CHECAGEM DO SEGUNDO DESTINO
-                -- ======================================================================
-                if segundoDestino ~= nil then
-                    print("Segundo destino detectado! Iniciando delay de espera...")
+                        if p then 
+                            fireproximityprompt(p, 0)
+                            print("Prompt feito no bloco usando comando direto!")
+                            task.wait(0.5)
+                        else
+                            print("Nenhum ProximityPrompt encontrado em: " .. v.Name)
+                        end
+                    end)
                     
-                    task.wait(3)
+                    if not successPrompt then
+                        print("[ERRO NO PROMPT]:", erroPrompt)
+                    end
+
+                    -- Segundo destino (se existir)
+                    if segundoDestino ~= nil then
+                        print("Indo para segundo destino...")
+                        
+                        task.wait(3)
+                        
+                        moverParaDestino(segundoDestino)
+                    end
                     
-                    print("Indo para o segundo destino (Lobby)...")
-                    rootPart.Anchored = true 
-                    
-                    local animacao2 = TweenService:Create(rootPart, info, {CFrame = segundoDestino:GetPivot()})
-                    animacao2:Play()
-                    
-                    animacao2.Completed:Wait()
-                    rootPart.Anchored = false 
-                    print("Cheguei no segundo destino final!")
-                else
-                    print("Nenhum segundo destino foi colocado para este item.")
+                    task.wait(0.5)
                 end
-                
-                task.wait(0.1)  -- CORRIGIDO: estava vazio, agora tem 0.5 segundos
-                
             end
         end
-    else
-        print("Zone " .. zoneName .. " não carregou após " .. maxTentativas .. " segundos, ignorando...")
+    end)
+    
+    -- Se der qualquer erro, o script NÃO para
+    if not success then
+        print("[ERRO NO LOOP PRINCIPAL]:", erro)
+        print("[RECUPERANDO] Continuando execução...")
+        
+        -- Garante que o personagem não fique preso
+        pcall(function()
+            if rootPart then
+                rootPart.Anchored = false
+            end
+        end)
+        
+        -- Garante que podePegar volte a true
+        podePegar = true
+        isTeleporting = false
     end
-  end
-  
-  task.wait(0.5)
+    
+    task.wait(0.1)
 end
