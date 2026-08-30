@@ -1,49 +1,51 @@
 local TweenService = game:GetService("TweenService")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
+local rootPart = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
 
 -- ======================================================================
 -- CONFIGURAÇÃO DOS DESTINOS (Modifique aqui)
 -- ======================================================================
+
+-- Se você NÃO quiser um segundo destino, mude a linha abaixo para: local segundoDestino = nil
 local segundoDestino = nil 
 
--- Tween MUITO rápido (0.05 segundos)
-local info = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
+-- Configuração do Tween (2 segundos de viagem)
+local info = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
 
 -- ======================================================================
--- SERVIÇOS
+-- CONFIGURAÇÃO DAS ÁREAS DE RENDERIZAÇÃO (Modifique aqui)
+-- ======================================================================
+local zonaInicial = 47  -- Primeira zona para renderizar
+local zonaFinal = 57    -- Última zona para renderizar
+
+-- ======================================================================
+-- [ ADIÇÃO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE
 -- ======================================================================
 local TeleportService = game:GetService("ReplicatedStorage").Packages._Index["acecateer_knit@1.7.2"].knit.Services.BaseTeleportService.RF.TeleportToSpawn
 local SellService = game:GetService("ReplicatedStorage").Packages._Index["acecateer_knit@1.7.2"].knit.Services.DataService.RF.SellAllBackpackLoot
 
 local podePegar = true
-local isTeleporting = false
+local precisaRenderizar = true  -- Começa true para renderizar na primeira vez
 
--- ======================================================================
--- FUNÇÃO PARA VERIFICAR INVENTÁRIO (COM PROTEÇÃO TOTAL)
--- ======================================================================
+-- Função para verificar se o inventário está cheio (funciona com qualquer número)
 local function verificarInventario()
     local success, resultado = pcall(function()
-        local backpack = player.PlayerGui.MainScreenGui.Currencies.Backpack
-        
-        if not backpack then return false end
-        
-        local texto = backpack.ContentText
-        if not texto then return false end
-        
-        local atual, maximo = texto:match("(%d+)/(%d+)")
-        
-        if atual and maximo then
-            atual = tonumber(atual)
-            maximo = tonumber(maximo)
-            
-            if atual and maximo and maximo > 0 and atual >= maximo then
-                return true
+        local backpack = game:GetService("Players").LocalPlayer.PlayerGui.MainScreenGui.Currencies.Backpack.Value
+        if backpack and backpack:IsA("TextLabel") then
+            local texto = backpack.ContentText
+            if texto then
+                local partes = {}
+                for parte in string.gmatch(texto, "([^/]+)") do
+                    table.insert(partes, parte)
+                end
+                if #partes == 2 then
+                    local atual = tonumber(partes[1]) or 0
+                    local maximo = tonumber(partes[2]) or 0
+                    if atual >= maximo and maximo > 0 then
+                        return true
+                    end
+                end
             end
         end
-        
         return false
     end)
     
@@ -54,148 +56,146 @@ local function verificarInventario()
     end
 end
 
--- ======================================================================
--- FUNÇÃO PARA TELEPORTAR E VENDER (COM PROTEÇÃO TOTAL)
--- ======================================================================
-local function teleportarEVender()
-    if isTeleporting then return end
-    isTeleporting = true
-    
-    print("[DETECTADO] Inventário cheio! Teleportando...")
-    podePegar = false
-    
-    -- Teleporte com proteção total
-    local success, erro = pcall(function()
-        TeleportService:InvokeServer()
-    end)
-    
-    if not success then
-        print("[ERRO] Falha no teleporte:", erro)
-    else
-        print("[SUCESSO] Teleportado!")
-    end
-    
-    task.wait(0.2)
-    
-    -- Venda com proteção total
-    success, erro = pcall(function()
-        SellService:InvokeServer()
-    end)
-    
-    if not success then
-        print("[ERRO] Falha na venda:", erro)
-    else
-        print("[SUCESSO] Vendido!")
-    end
-    
-    task.wait(0.2)
-    
-    podePegar = true
-    isTeleporting = false
-    print("[LIBERADO] Voltou a pegar!")
-end
-
--- ======================================================================
--- LOOP DE VERIFICAÇÃO DE INVENTÁRIO (PROTEGIDO)
--- ======================================================================
+-- Loop de verificação contínua (executa em paralelo)
 coroutine.wrap(function()
     while true do
         local success, erro = pcall(function()
-            if verificarInventario() and podePegar and not isTeleporting then
-                teleportarEVender()
+            if verificarInventario() and podePegar then
+                print("[DETECTADO] Inventário cheio! Teleportando para o spawn...")
+                podePegar = false
+                
+                local Result = table.pack(TeleportService:InvokeServer())
+                print("[TELEPORT] Teleportado para o spawn!")
+                
+                task.wait(0.5)
+                
+                print("[VENDA] Vendendo todo o inventário...")
+                SellService:InvokeServer()
+                print("[VENDA] Inventário vendido com sucesso!")
+                task.wait(0.5)
+                
+                podePegar = true
+                precisaRenderizar = true  -- ATIVA A RENDERIZAÇÃO NOVAMENTE!
+                print("[LIBERADO] Volta a pegar Divine! Vai renderizar novamente!")
             end
         end)
         
         if not success then
-            print("[ERRO NO LOOP DE INVENTÁRIO]:", erro)
+            print("[ERRO] Falha no loop de inventário:", erro)
+            podePegar = true
         end
         
-        task.wait(0.3)
+        task.wait(1)
     end
 end)()
+-- ======================================================================
 
 -- ======================================================================
--- FUNÇÃO PARA MOVER COM TWEEN RÁPIDO (PROTEGIDA)
+-- FUNÇÃO PARA RENDERIZAR ÁREAS USANDO Zone_Particles
 -- ======================================================================
-local function moverParaDestino(destino)
-    local success, erro = pcall(function()
-        if not destino or not rootPart then return false end
-        
-        rootPart.Anchored = true
-        
-        local tween = TweenService:Create(rootPart, info, {CFrame = destino:GetPivot()})
-        tween:Play()
-        
-        tween.Completed:Wait()
-        rootPart.Anchored = false
-        
-        return true
-    end)
+local function renderizarAreas()
+    print("[RENDERIZAÇÃO] Iniciando renderização das áreas " .. zonaInicial .. " até " .. zonaFinal .. "...")
     
-    if not success then
-        print("[ERRO NO MOVIMENTO]:", erro)
-        -- Tenta liberar o personagem caso tenha ficado travado
-        pcall(function()
-            if rootPart then
-                rootPart.Anchored = false
+    for zoneNumber = zonaInicial, zonaFinal do
+        local zoneName = "Zone_" .. zoneNumber
+        
+        -- Tenta encontrar a Zone_Particles (nome fixo, sem número)
+        local zoneParticles = nil
+        
+        local success, result = pcall(function()
+            local zone = workspace.Zones.W5[zoneName]
+            if zone then
+                -- Procura por Zone_Particles (nome fixo)
+                return zone:FindFirstChild("Zone_Particles")
             end
+            return nil
         end)
-        return false
+        
+        if success and result then
+            zoneParticles = result
+        end
+        
+        if zoneParticles then
+            print("[RENDERIZAÇÃO] Indo para Zone_Particles da " .. zoneName .. "...")
+            
+            local successTween, erroTween = pcall(function()
+                rootPart.Anchored = true
+                
+                local animacao = TweenService:Create(rootPart, info, {CFrame = zoneParticles.CFrame})
+                animacao:Play()
+                
+                animacao.Completed:Wait()
+                rootPart.Anchored = false
+            end)
+            
+            if not successTween then
+                print("[ERRO] Falha ao mover para Zone_Particles da " .. zoneName .. ":", erroTween)
+                pcall(function()
+                    rootPart.Anchored = false
+                end)
+            end
+            
+            task.wait()  -- Yield mínimo (1 frame)
+        else
+            print("[RENDERIZAÇÃO] Zone_Particles da " .. zoneName .. " não encontrada, pulando...")
+        end
     end
     
-    return resultado
+    print("[RENDERIZAÇÃO] Todas as áreas processadas!")
+    precisaRenderizar = false  -- Desativa a renderização até o próximo teleporte
 end
 
 -- ======================================================================
--- LOOP PRINCIPAL (PROTEÇÃO TOTAL - NUNCA PARA)
+-- LOOP PRINCIPAL (OTIMIZADO - YIELD MÍNIMO)
 -- ======================================================================
 while true do
-    -- Proteção total do loop inteiro
-    local success, erro = pcall(function()
-        -- Verifica se o personagem ainda existe
-        if not character or not character.Parent then
-            character = player.Character or player.CharacterAdded:Wait()
-            rootPart = character:WaitForChild("HumanoidRootPart")
-        end
+    -- Se precisa renderizar, renderiza
+    if precisaRenderizar then
+        local successRender, erroRender = pcall(function()
+            renderizarAreas()
+        end)
         
-        for zoneNumber = 47, 57 do
-            if not podePegar then break end
-            
-            local zoneName = "Zone_" .. zoneNumber
-            
-            -- Acesso à zona com proteção
-            local successZone, zone = pcall(function()
-                return workspace.Zones.W5[zoneName]
+        if not successRender then
+            print("[ERRO] Falha na renderização:", erroRender)
+            pcall(function()
+                rootPart.Anchored = false
             end)
-            
-            if not successZone or not zone then continue end
-            
-            local spawnZone = zone:FindFirstChild("SpawnZone")
-            
-            if not spawnZone then continue end
-            
-            -- Varre todos os filhos
-            for _, v in pairs(spawnZone:GetChildren()) do
+        end
+    end
+    
+    -- Pega Genesis continuamente
+    for zoneNumber = zonaInicial, zonaFinal do
+        if not podePegar then break end
+        
+        local zoneName = "Zone_" .. zoneNumber
+        
+        local success, spawnZone = pcall(function()
+            return workspace.Zones.W5[zoneName].SpawnZone
+        end)
+        
+        if success and spawnZone then
+            for i, v in pairs(spawnZone:GetChildren()) do
                 if not podePegar then break end
                 
-                -- Verificação do item com proteção
-                local successItem, isGenesis = pcall(function()
-                    return v:IsA("Model") and v:GetAttribute("LootRarity") == "Genesis"
-                end)
-                
-                if successItem and isGenesis then
+                if v:IsA("Model") and v:GetAttribute("LootRarity") == "Genesis" then
                     
-                    print("Indo para: " .. v.Name)
-                    
-                    -- Move com Tween rápido (já tem proteção interna)
-                    moverParaDestino(v)
-                    
-                    task.wait(0.5)
-                    
-                    -- PROMPT ORIGINAL (COM PROTEÇÃO)
-                    local successPrompt, erroPrompt = pcall(function()
+                    local successItem, erro = pcall(function()
+                        local primeiroDestino = v
+
+                        -- Vai até o Genesis
+                        rootPart.Anchored = true 
+
+                        local animacao1 = TweenService:Create(rootPart, info, {CFrame = primeiroDestino:GetPivot()})
+                        animacao1:Play()
+
+                        animacao1.Completed:Wait()
+                        rootPart.Anchored = false 
+                        print("Cheguei no destino: " .. primeiroDestino.Name)
+                        task.wait(0.5)
+                        
+                        -- Prompt
                         local p = nil
-                        for _, filho in pairs(v:GetDescendants()) do
+                        for _, filho in pairs(primeiroDestino:GetDescendants()) do
                             if filho:IsA("ProximityPrompt") then
                                 p = filho
                                 break
@@ -207,45 +207,41 @@ while true do
                             print("Prompt feito no bloco usando comando direto!")
                             task.wait(0.5)
                         else
-                            print("Nenhum ProximityPrompt encontrado em: " .. v.Name)
+                            print("Nenhum ProximityPrompt encontrado em: " .. primeiroDestino.Name)
                         end
+
+                        -- Segundo destino
+                        if segundoDestino ~= nil then
+                            print("Segundo destino detectado! Iniciando delay de espera...")
+                            
+                            task.wait(3)
+                            
+                            print("Indo para o segundo destino (Lobby)...")
+                            rootPart.Anchored = true 
+                            
+                            local animacao2 = TweenService:Create(rootPart, info, {CFrame = segundoDestino:GetPivot()})
+                            animacao2:Play()
+                            
+                            animacao2.Completed:Wait()
+                            rootPart.Anchored = false 
+                            print("Cheguei no segundo destino final!")
+                        else
+                            print("Nenhum segundo destino foi colocado para este item.")
+                        end
+                        
+                        task.wait(0.5)
                     end)
                     
-                    if not successPrompt then
-                        print("[ERRO NO PROMPT]:", erroPrompt)
+                    if not successItem then
+                        print("[ERRO] Falha ao processar item:", erro)
+                        pcall(function()
+                            rootPart.Anchored = false
+                        end)
                     end
-
-                    -- Segundo destino (se existir)
-                    if segundoDestino ~= nil then
-                        print("Indo para segundo destino...")
-                        
-                        task.wait(3)
-                        
-                        moverParaDestino(segundoDestino)
-                    end
-                    
-                    task.wait(0.5)
                 end
             end
         end
-    end)
-    
-    -- Se der qualquer erro, o script NÃO para
-    if not success then
-        print("[ERRO NO LOOP PRINCIPAL]:", erro)
-        print("[RECUPERANDO] Continuando execução...")
-        
-        -- Garante que o personagem não fique preso
-        pcall(function()
-            if rootPart then
-                rootPart.Anchored = false
-            end
-        end)
-        
-        -- Garante que podePegar volte a true
-        podePegar = true
-        isTeleporting = false
     end
     
-    task.wait(0.1)
+    task.wait()  -- Yield mínimo (1 frame, ~0.016 segundos)
 end
