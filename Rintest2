@@ -14,8 +14,8 @@ local info = TweenInfo.new(0.05, Enum.EasingStyle.Linear) -- Reduzido para 0.05 
 -- ======================================================================
 -- CONFIGURAÇÃO DAS ÁREAS DE RENDERIZAÇÃO (Modifique aqui)
 -- ======================================================================
-local zonaInicial = 40  -- Primeira zona para renderizar
-local zonaFinal = 46    -- Última zona para renderizar
+local zonaInicial = 47  -- Primeira zona para renderizar
+local zonaFinal = 57   -- Última zona para renderizar
 
 -- ======================================================================
 -- [ MODIFICADO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE (SEM VENDA)
@@ -97,7 +97,7 @@ local function renderizarAreas()
         local zoneParticles = nil
         
         local success, result = pcall(function()
-            local zone = workspace.Zones.W4[zoneName]
+            local zone = workspace.Zones.W5[zoneName]
             if zone then
                 -- Procura por Zone_Particles (nome fixo)
                 return zone:FindFirstChild("Zone_Particles")
@@ -164,14 +164,14 @@ while true do
         local zoneName = "Zone_" .. zoneNumber
         
         local success, spawnZone = pcall(function()
-            return workspace.Zones.W4[zoneName].SpawnZone
+            return workspace.Zones.W5[zoneName].SpawnZone
         end)
         
         if success and spawnZone then
             for i, v in pairs(spawnZone:GetChildren()) do
                 if not podePegar then break end
                 
-                if v:IsA("Model") and v:GetAttribute("LootRarity") == "Singularity" then
+                if v:IsA("Model") and v:GetAttribute("LootRarity") == "Genesis" then
                     
                     local successItem, erro = pcall(function()
                         local primeiroDestino = v
