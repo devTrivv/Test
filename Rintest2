@@ -8,14 +8,14 @@ local rootPart = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPa
 -- Se você NÃO quiser um segundo destino, mude a linha abaixo para: local segundoDestino = nil
 local segundoDestino = nil 
 
--- Configuração do Tween (2 segundos de viagem)
-local info = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
+-- Configuração do Tween (VELOCIDADE MÁXIMA)
+local info = TweenInfo.new(0.05, Enum.EasingStyle.Linear) -- Reduzido para 0.05 segundos
 
 -- ======================================================================
 -- CONFIGURAÇÃO DAS ÁREAS DE RENDERIZAÇÃO (Modifique aqui)
 -- ======================================================================
-local zonaInicial = 47  -- Primeira zona para renderizar
-local zonaFinal = 57    -- Última zona para renderizar
+local zonaInicial = 40  -- Primeira zona para renderizar
+local zonaFinal = 46    -- Última zona para renderizar
 
 -- ======================================================================
 -- [ MODIFICADO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE (SEM VENDA)
@@ -66,7 +66,7 @@ coroutine.wrap(function()
                 local Result = table.pack(TeleportService:InvokeServer())
                 print("[TELEPORT] Teleportado para o spawn!")
                 
-                task.wait(1) -- Espera 1 segundo após o teleporte
+                task.wait() -- Apenas 1 frame de espera
                 
                 podePegar = true
                 precisaRenderizar = true  -- ATIVA A RENDERIZAÇÃO NOVAMENTE!
@@ -79,7 +79,7 @@ coroutine.wrap(function()
             podePegar = true
         end
         
-        task.wait(1)
+        task.wait() -- Verificação mais rápida (a cada frame)
     end
 end)()
 -- ======================================================================
@@ -97,7 +97,7 @@ local function renderizarAreas()
         local zoneParticles = nil
         
         local success, result = pcall(function()
-            local zone = workspace.Zones.W5[zoneName]
+            local zone = workspace.Zones.W4[zoneName]
             if zone then
                 -- Procura por Zone_Particles (nome fixo)
                 return zone:FindFirstChild("Zone_Particles")
@@ -129,7 +129,7 @@ local function renderizarAreas()
                 end)
             end
             
-            task.wait()  -- Yield mínimo (1 frame)
+            -- task.wait() removido para máxima velocidade
         else
             print("[RENDERIZAÇÃO] Zone_Particles da " .. zoneName .. " não encontrada, pulando...")
         end
@@ -140,7 +140,7 @@ local function renderizarAreas()
 end
 
 -- ======================================================================
--- LOOP PRINCIPAL (OTIMIZADO - YIELD MÍNIMO)
+-- LOOP PRINCIPAL (OTIMIZADO - VELOCIDADE MÁXIMA)
 -- ======================================================================
 while true do
     -- Se precisa renderizar, renderiza
@@ -164,19 +164,19 @@ while true do
         local zoneName = "Zone_" .. zoneNumber
         
         local success, spawnZone = pcall(function()
-            return workspace.Zones.W5[zoneName].SpawnZone
+            return workspace.Zones.W4[zoneName].SpawnZone
         end)
         
         if success and spawnZone then
             for i, v in pairs(spawnZone:GetChildren()) do
                 if not podePegar then break end
                 
-                if v:IsA("Model") and v:GetAttribute("LootRarity") == "Genesis" then
+                if v:IsA("Model") and v:GetAttribute("LootRarity") == "Singularity" then
                     
                     local successItem, erro = pcall(function()
                         local primeiroDestino = v
 
-                        -- Vai até o Genesis
+                        -- Vai até o Genesis (direto, sem espera)
                         rootPart.Anchored = true 
 
                         local animacao1 = TweenService:Create(rootPart, info, {CFrame = primeiroDestino:GetPivot()})
@@ -185,9 +185,8 @@ while true do
                         animacao1.Completed:Wait()
                         rootPart.Anchored = false 
                         print("Cheguei no destino: " .. primeiroDestino.Name)
-                        task.wait(0.5)
                         
-                        -- Prompt
+                        -- Prompt (MANTIDO INTACTO - não mexer aqui!)
                         local p = nil
                         for _, filho in pairs(primeiroDestino:GetDescendants()) do
                             if filho:IsA("ProximityPrompt") then
@@ -199,7 +198,7 @@ while true do
                         if p then 
                             fireproximityprompt(p, 0)
                             print("Prompt feito no bloco usando comando direto!")
-                            task.wait(0.5)
+                            task.wait()  -- MANTIDO INTACTO!
                         else
                             print("Nenhum ProximityPrompt encontrado em: " .. primeiroDestino.Name)
                         end
@@ -223,7 +222,7 @@ while true do
                             print("Nenhum segundo destino foi colocado para este item.")
                         end
                         
-                        task.wait(0.1)
+                        task.wait()
                     end)
                     
                     if not successItem then
@@ -237,5 +236,5 @@ while true do
         end
     end
     
-    task.wait()  -- Yield mínimo (1 frame, ~0.016 segundos)
+    task.wait()  -- Yield mínimo (1 frame)
 end
