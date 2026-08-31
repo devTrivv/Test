@@ -97,7 +97,7 @@ local function renderizarAreas()
         local zoneParticles = nil
         
         local success, result = pcall(function()
-            local zone = workspace.Zones.W5k7[zoneName]
+            local zone = workspace.Zones.W5[zoneName]
             if zone then
                 -- Procura por Zone_Particles (nome fixo)
                 return zone:FindFirstChild("Zone_Particles")
@@ -164,7 +164,7 @@ while true do
         local zoneName = "Zone_" .. zoneNumber
         
         local success, spawnZone = pcall(function()
-            return workspace.Zones.W2[zoneName].SpawnZone
+            return workspace.Zones.W5[zoneName].SpawnZone
         end)
         
         if success and spawnZone then
