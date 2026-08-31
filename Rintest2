@@ -18,10 +18,9 @@ local zonaInicial = 47  -- Primeira zona para renderizar
 local zonaFinal = 57    -- Última zona para renderizar
 
 -- ======================================================================
--- [ ADIÇÃO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE
+-- [ MODIFICADO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE (SEM VENDA)
 -- ======================================================================
 local TeleportService = game:GetService("ReplicatedStorage").Packages._Index["acecateer_knit@1.7.2"].knit.Services.BaseTeleportService.RF.TeleportToSpawn
-local SellService = game:GetService("ReplicatedStorage").Packages._Index["acecateer_knit@1.7.2"].knit.Services.DataService.RF.SellAllBackpackLoot
 
 local podePegar = true
 local precisaRenderizar = true  -- Começa true para renderizar na primeira vez
@@ -67,12 +66,7 @@ coroutine.wrap(function()
                 local Result = table.pack(TeleportService:InvokeServer())
                 print("[TELEPORT] Teleportado para o spawn!")
                 
-                task.wait(0.5)
-                
-                print("[VENDA] Vendendo todo o inventário...")
-                SellService:InvokeServer()
-                print("[VENDA] Inventário vendido com sucesso!")
-                task.wait(0.5)
+                task.wait(1) -- Espera 1 segundo após o teleporte
                 
                 podePegar = true
                 precisaRenderizar = true  -- ATIVA A RENDERIZAÇÃO NOVAMENTE!
@@ -229,7 +223,7 @@ while true do
                             print("Nenhum segundo destino foi colocado para este item.")
                         end
                         
-                        task.wait(0.5)
+                        task.wait(0.1)
                     end)
                     
                     if not successItem then
