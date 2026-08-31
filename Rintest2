@@ -15,7 +15,7 @@ local info = TweenInfo.new(0.05, Enum.EasingStyle.Linear) -- Reduzido para 0.05 
 -- CONFIGURAÇÃO DAS ÁREAS DE RENDERIZAÇÃO (Modifique aqui)
 -- ======================================================================
 local zonaInicial = 47  -- Primeira zona para renderizar
-local zonaFinal = 57   -- Última zona para renderizar
+local zonaFinal = 57    -- Última zona para renderizar
 
 -- ======================================================================
 -- [ MODIFICADO ] DETECÇÃO DO INVENTÁRIO CHEIO E TELEPORTE (SEM VENDA)
@@ -97,7 +97,7 @@ local function renderizarAreas()
         local zoneParticles = nil
         
         local success, result = pcall(function()
-            local zone = workspace.Zones.W5[zoneName]
+            local zone = workspace.Zones.W5k7[zoneName]
             if zone then
                 -- Procura por Zone_Particles (nome fixo)
                 return zone:FindFirstChild("Zone_Particles")
@@ -164,7 +164,7 @@ while true do
         local zoneName = "Zone_" .. zoneNumber
         
         local success, spawnZone = pcall(function()
-            return workspace.Zones.W5[zoneName].SpawnZone
+            return workspace.Zones.W2[zoneName].SpawnZone
         end)
         
         if success and spawnZone then
@@ -176,7 +176,7 @@ while true do
                     local successItem, erro = pcall(function()
                         local primeiroDestino = v
 
-                        -- Vai até o Genesis (direto, sem espera)
+                        -- Vai até o Genesis
                         rootPart.Anchored = true 
 
                         local animacao1 = TweenService:Create(rootPart, info, {CFrame = primeiroDestino:GetPivot()})
@@ -185,6 +185,7 @@ while true do
                         animacao1.Completed:Wait()
                         rootPart.Anchored = false 
                         print("Cheguei no destino: " .. primeiroDestino.Name)
+                        task.wait(0.5)  -- RESTAURADO!
                         
                         -- Prompt (MANTIDO INTACTO - não mexer aqui!)
                         local p = nil
