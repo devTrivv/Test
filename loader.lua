@@ -258,13 +258,12 @@ end
 local function BuscarMatriz()
     local candidatos = {}
 
-    Log("🔍 Procurando matriz de Units...")
+    Log("🔍 Procurando matriz de Units (filtro: 50-250)...")
 
     pcall(function()
         for _, obj in pairs(getgc(true)) do
             if EhValida(obj) then
                 local units = ContarUnits(obj)
-                -- 🎯 Filtro: entre 50 e 250 bonecos (é o inventário do jogador)
                 if units >= 50 and units <= 250 then
                     table.insert(candidatos, {
                         tabela = obj,
@@ -281,32 +280,11 @@ local function BuscarMatriz()
         return candidatos[1].tabela
     end
 
-    -- Fallback: qualquer tamanho >= 5
-    Log("⚠️ Nada em 50-250, tentando qualquer...")
-
-    local todos = {}
-    pcall(function()
-        for _, obj in pairs(getgc(true)) do
-            if EhValida(obj) then
-                local units = ContarUnits(obj)
-                if units >= 5 then
-                    table.insert(todos, { tabela = obj, units = units })
-                end
-            end
-        end
-    end)
-
-    if #todos > 0 then
-        table.sort(todos, function(a, b) return a.units > b.units end)
-        Log(string.format("✅ Matriz (fallback)! (%d bonecos)", todos[1].units))
-        return todos[1].tabela
-    end
-
     return nil
 end
 
 local Matriz = BuscarMatriz()
-if not Matriz then Log("❌ Matriz não encontrada!") return end
+if not Matriz then Log("❌ Matriz não encontrada! Você tem 50+ bonecos?") return end
 Log("✅ Matriz encontrada!")
 
 local function LerQuirkDoBoneco(dadosBoneco)
@@ -827,7 +805,8 @@ for idx, quirkNome in ipairs(QUIRKS_OPCOES) do
     AlvoBtn.Text = "☐ " .. quirkNome
     AlvoBtn.TextColor3 = CORES.texto
     AlvoBtn.TextSize = 8
-    AlvoBtn.Font = Enum.Font.GothamMedium    AlvoBtn.BorderSizePixel = 0
+    AlvoBtn.Font = Enum.Font.GothamMedium
+    AlvoBtn.BorderSizePixel = 0
     AlvoBtn.ZIndex = 4
     AlvoBtn.AutoButtonColor = false
     AlvoBtn.Parent = Linha
@@ -976,9 +955,58 @@ BtnLimpar.AutoButtonColor = false
 BtnLimpar.Parent = LinhaInfo
 AplicarCorner(BtnLimpar, 5)
 
+local PainelConfig = Instance.new("Frame")
+PainelConfig.Size = UDim2.new(1, 0, 0, 20)
+PainelConfig.Position = UDim2.new(0, 0, 0, 46)
+PainelConfig.BackgroundTransparency = 1
+PainelConfig.ZIndex = 5
+PainelConfig.Parent = ColunaDir
+
+local BtnSalvar = Instance.new("TextButton")
+BtnSalvar.Size = UDim2.new(0.33, -1, 1, 0)
+BtnSalvar.Position = UDim2.new(0, 0, 0, 0)
+BtnSalvar.BackgroundColor3 = Color3.fromRGB(50, 110, 170)
+BtnSalvar.Text = "💾 Salvar"
+BtnSalvar.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnSalvar.TextSize = 7
+BtnSalvar.Font = Enum.Font.GothamBold
+BtnSalvar.BorderSizePixel = 0
+BtnSalvar.ZIndex = 6
+BtnSalvar.AutoButtonColor = false
+BtnSalvar.Parent = PainelConfig
+AplicarCorner(BtnSalvar, 5)
+
+local BtnCarregar = Instance.new("TextButton")
+BtnCarregar.Size = UDim2.new(0.33, -1, 1, 0)
+BtnCarregar.Position = UDim2.new(0.335, 0, 0, 0)
+BtnCarregar.BackgroundColor3 = Color3.fromRGB(160, 110, 50)
+BtnCarregar.Text = "📂 Carregar"
+BtnCarregar.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnCarregar.TextSize = 7
+BtnCarregar.Font = Enum.Font.GothamBold
+BtnCarregar.BorderSizePixel = 0
+BtnCarregar.ZIndex = 6
+BtnCarregar.AutoButtonColor = false
+BtnCarregar.Parent = PainelConfig
+AplicarCorner(BtnCarregar, 5)
+
+local BtnAutoLoad = Instance.new("TextButton")
+BtnAutoLoad.Size = UDim2.new(0.33, -1, 1, 0)
+BtnAutoLoad.Position = UDim2.new(0.67, 0, 0, 0)
+BtnAutoLoad.BackgroundColor3 = CORES.fundo3
+BtnAutoLoad.Text = "☐ Auto"
+BtnAutoLoad.TextColor3 = CORES.textoFraco
+BtnAutoLoad.TextSize = 7
+BtnAutoLoad.Font = Enum.Font.GothamBold
+BtnAutoLoad.BorderSizePixel = 0
+BtnAutoLoad.ZIndex = 6
+BtnAutoLoad.AutoButtonColor = false
+BtnAutoLoad.Parent = PainelConfig
+AplicarCorner(BtnAutoLoad, 5)
+
 Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1, 0, 1, -100)
-Scroll.Position = UDim2.new(0, 0, 0, 46)
+Scroll.Size = UDim2.new(1, 0, 1, -120)
+Scroll.Position = UDim2.new(0, 0, 0, 70)
 Scroll.BackgroundColor3 = CORES.fundo2
 Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 4
@@ -999,55 +1027,6 @@ local Pad = Instance.new("UIPadding")
 Pad.PaddingTop = UDim.new(0, 5); Pad.PaddingLeft = UDim.new(0, 5)
 Pad.PaddingRight = UDim.new(0, 5); Pad.PaddingBottom = UDim.new(0, 5)
 Pad.Parent = Scroll
-
-local PainelConfig = Instance.new("Frame")
-PainelConfig.Size = UDim2.new(1, 0, 0, 20)
-PainelConfig.Position = UDim2.new(0, 0, 1, -20)
-PainelConfig.BackgroundTransparency = 1
-PainelConfig.ZIndex = 3
-PainelConfig.Parent = ColunaDir
-
-local BtnSalvar = Instance.new("TextButton")
-BtnSalvar.Size = UDim2.new(0.33, -1, 1, 0)
-BtnSalvar.Position = UDim2.new(0, 0, 0, 0)
-BtnSalvar.BackgroundColor3 = Color3.fromRGB(50, 110, 170)
-BtnSalvar.Text = "💾 Salvar"
-BtnSalvar.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnSalvar.TextSize = 7
-BtnSalvar.Font = Enum.Font.GothamBold
-BtnSalvar.BorderSizePixel = 0
-BtnSalvar.ZIndex = 4
-BtnSalvar.AutoButtonColor = false
-BtnSalvar.Parent = PainelConfig
-AplicarCorner(BtnSalvar, 5)
-
-local BtnCarregar = Instance.new("TextButton")
-BtnCarregar.Size = UDim2.new(0.33, -1, 1, 0)
-BtnCarregar.Position = UDim2.new(0.335, 0, 0, 0)
-BtnCarregar.BackgroundColor3 = Color3.fromRGB(160, 110, 50)
-BtnCarregar.Text = "📂 Carregar"
-BtnCarregar.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnCarregar.TextSize = 7
-BtnCarregar.Font = Enum.Font.GothamBold
-BtnCarregar.BorderSizePixel = 0
-BtnCarregar.ZIndex = 4
-BtnCarregar.AutoButtonColor = false
-BtnCarregar.Parent = PainelConfig
-AplicarCorner(BtnCarregar, 5)
-
-local BtnAutoLoad = Instance.new("TextButton")
-BtnAutoLoad.Size = UDim2.new(0.33, -1, 1, 0)
-BtnAutoLoad.Position = UDim2.new(0.67, 0, 0, 0)
-BtnAutoLoad.BackgroundColor3 = CORES.fundo3
-BtnAutoLoad.Text = "☐ Auto"
-BtnAutoLoad.TextColor3 = CORES.textoFraco
-BtnAutoLoad.TextSize = 7
-BtnAutoLoad.Font = Enum.Font.GothamBold
-BtnAutoLoad.BorderSizePixel = 0
-BtnAutoLoad.ZIndex = 4
-BtnAutoLoad.AutoButtonColor = false
-BtnAutoLoad.Parent = PainelConfig
-AplicarCorner(BtnAutoLoad, 5)
 
 local FaixaBotoes = Instance.new("Frame")
 FaixaBotoes.Size = UDim2.new(1, 0, 0, 30)
