@@ -1,8 +1,6 @@
-local ID_ALVO = "5c6fef19-f21f-4cc9-a215-93081374c79e"
 local DELAY_APOS_ROLL = 0.05
 local USAR_PLAYER_GUI = true
-local MAX_ITENS = 300
-local MAX_BONECOS_VALIDOS = 500
+local MAX_ITENS = 400
 
 local NOME_ARQUIVO          = "reroll_quirk_config.json"
 local NOME_ARQUIVO_AUTOLOAD = "reroll_quirk_autoload.json"
@@ -14,7 +12,6 @@ local CORES = {
     fundo          = Color3.fromRGB(24, 24, 36),
     fundo2         = Color3.fromRGB(30, 30, 46),
     fundo3         = Color3.fromRGB(38, 38, 58),
-    hover          = Color3.fromRGB(55, 55, 80),
     borda          = Color3.fromRGB(70, 70, 110),
     primaria       = Color3.fromRGB(130, 100, 220),
     primariaClara  = Color3.fromRGB(160, 130, 255),
@@ -32,7 +29,6 @@ local Scroll = nil
 
 local function Log(msg)
     pcall(function() print("[REROLL] " .. tostring(msg)) end)
-    pcall(function() warn("[REROLL] " .. tostring(msg)) end)
 end
 
 Log("🚀 Script iniciado!")
@@ -73,8 +69,6 @@ end)
 if not LocalPlayer then Log("❌ LocalPlayer indisponível!") return end
 
 Log("✅ Serviços carregados")
-Log("👤 UserId: " .. tostring(LocalPlayer.UserId))
-Log("👤 Nome: " .. tostring(LocalPlayer.Name))
 
 if AUTO_RECONNECT then
     SafeCall("AutoReconnect", function()
@@ -84,9 +78,7 @@ if AUTO_RECONNECT then
         task.spawn(function()
             while task.wait(TEMPO_RECONNECT) do
                 pcall(function()
-                    local aindaConectado = true
-                    if not LocalPlayer or not LocalPlayer.Parent then aindaConectado = false end
-                    if not aindaConectado then
+                    if not LocalPlayer or not LocalPlayer.Parent then
                         pcall(function() TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer) end)
                         task.wait(3)
                         pcall(function() TeleportService:Teleport(PlaceId, LocalPlayer) end)
@@ -166,7 +158,7 @@ local function SerializarConfig(quirks, locks, selecionadosSet)
 end
 
 local function SalvarConfig(quirks, locks, selecionadosSet)
-    if not writefile then return false, "Executor não suporta writefile" end
+    if not writefile then return false, "Sem writefile" end
     local json = SerializarConfig(quirks, locks, selecionadosSet)
     local ok, err = pcall(writefile, NOME_ARQUIVO, json)
     if not ok then return false, tostring(err) end
@@ -218,7 +210,7 @@ local function LerAutoLoadFlag()
     return conteudo:gsub("%s", "") == "true"
 end
 
-Log("🔍 Buscando matriz...")
+Log("🔍 Buscando matriz de Units...")
 
 local function EhValida(tab)
     if type(tab) ~= "table" then return false end
@@ -236,158 +228,85 @@ local function EhValida(tab)
     return true
 end
 
-local function TemFormatoDeBoneco(tab)
-    if type(tab) ~= "table" then return false end
-    local temNome = false
-    local temId = false
-    local temQuirk = false
-    local contador = 0
-
+local function ContarUnits(tab)
+    local totalUnits = 0
     pcall(function()
+        local contador = 0
         for k, v in pairs(tab) do
             contador = contador + 1
-            if contador > 500 then return end
-
-            if type(k) == "string" then
-                local kl = k:lower()
-                if kl == "name" or kl == "nome" then temNome = true end
-                if kl == "uuid" or kl == "id" or kl == "uid" then temId = true end
-                if kl:find("quirk") then temQuirk = true end
-            end
+            if contador > 1000 then return end
 
             if type(v) == "table" then
+                local ehUnit = false
                 pcall(function()
                     for k2, v2 in pairs(v) do
-                        if type(k2) == "string" then
-                            local kl2 = k2:lower()
-                            if kl2 == "name" or kl2 == "nome" then temNome = true end
-                            if kl2 == "uuid" or kl2 == "id" or kl2 == "uid" then temId = true end
-                            if kl2:find("quirk") then temQuirk = true end
+                        if tostring(k2):lower() == "kind" and tostring(v2) == "Unit" then
+                            ehUnit = true
+                            return
                         end
                     end
                 end)
-            end
-        end
-    end)
-
-    return ((temNome and temQuirk) or (temId and temQuirk)) and contador > 3 and contador <= MAX_BONECOS_VALIDOS
-end
-
-local function ContarBonecosValidos(tab)
-    local count = 0
-    pcall(function()
-        for k, v in pairs(tab) do
-            if type(v) == "table" and EhValida(v) then
-                local temNome = false
-                local temId = false
-                local temQuirk = false
-                pcall(function()
-                    for k2, v2 in pairs(v) do
-                        if type(k2) == "string" then
-                            local kl = k2:lower()
-                            if kl == "name" or kl == "nome" then temNome = true end
-                            if kl == "uuid" or kl == "id" or kl == "uid" then temId = true end
-                            if kl:find("quirk") then temQuirk = true end
-                        end
-                    end
-                end)
-                if (temNome or temId) and temQuirk then
-                    count = count + 1
+                if ehUnit then
+                    totalUnits = totalUnits + 1
                 end
             end
         end
     end)
-    return count
+    return totalUnits
 end
 
 local function BuscarMatriz()
-    local found = nil
-
-    local ok = pcall(function()
-        for _, obj in pairs(getgc(true)) do
-            if EhValida(obj) then
-                local ok2, v = pcall(rawget, obj, ID_ALVO)
-                if ok2 and v ~= nil then found = obj; return end
-                pcall(function()
-                    for k, val in pairs(obj) do
-                        if type(val) == "table" and EhValida(val) then
-                            if val.UUID == ID_ALVO or val.Id == ID_ALVO or val[ID_ALVO] ~= nil then
-                                found = val
-                                return
-                            end
-                        end
-                    end
-                end)
-                if found then return end
-            end
-        end
-    end)
-    if not ok then LogErro("BuscarMatriz/ID", ok) end
-
-    if found then
-        Log("✅ Matriz encontrada pelo ID_ALVO!")
-        return found
-    end
-
-    Log("⚠️ ID_ALVO não encontrado, buscando pelos SEUS bonecos...")
-
-    local seuUserId = tostring(LocalPlayer.UserId)
-    local seuNome = tostring(LocalPlayer.Name)
-
     local candidatos = {}
+
+    Log("🔍 Procurando matriz de Units...")
+
     pcall(function()
         for _, obj in pairs(getgc(true)) do
-            if EhValida(obj) and TemFormatoDeBoneco(obj) then
-                local count = ContarBonecosValidos(obj)
-
-                if count >= 3 and count <= MAX_BONECOS_VALIDOS then
-                    local temSeuPlayer = false
-
-                    pcall(function()
-                        for k, v in pairs(obj) do
-                            if type(v) == "table" and EhValida(v) then
-                                for k2, v2 in pairs(v) do
-                                    if type(v2) == "string" then
-                                        if v2 == seuUserId or v2 == seuNome then
-                                            temSeuPlayer = true
-                                            return
-                                        end
-                                    elseif type(v2) == "number" then
-                                        if tostring(v2) == seuUserId then
-                                            temSeuPlayer = true
-                                            return
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end)
-
-                    local ehPequena = count < 100
-
-                    if temSeuPlayer or ehPequena then
-                        table.insert(candidatos, {
-                            tabela = obj,
-                            pontos = count + (temSeuPlayer and 1000 or 0)
-                        })
-                    end
+            if EhValida(obj) then
+                local units = ContarUnits(obj)
+                -- 🎯 Filtro: entre 50 e 250 bonecos (é o inventário do jogador)
+                if units >= 50 and units <= 250 then
+                    table.insert(candidatos, {
+                        tabela = obj,
+                        units = units
+                    })
                 end
             end
         end
     end)
 
     if #candidatos > 0 then
-        table.sort(candidatos, function(a, b) return a.pontos > b.pontos end)
-        found = candidatos[1].tabela
-        Log(string.format("✅ Matriz encontrada! (%d bonecos)", candidatos[1].pontos))
-        return found
+        table.sort(candidatos, function(a, b) return a.units > b.units end)
+        Log(string.format("✅ Matriz! (%d bonecos)", candidatos[1].units))
+        return candidatos[1].tabela
+    end
+
+    -- Fallback: qualquer tamanho >= 5
+    Log("⚠️ Nada em 50-250, tentando qualquer...")
+
+    local todos = {}
+    pcall(function()
+        for _, obj in pairs(getgc(true)) do
+            if EhValida(obj) then
+                local units = ContarUnits(obj)
+                if units >= 5 then
+                    table.insert(todos, { tabela = obj, units = units })
+                end
+            end
+        end
+    end)
+
+    if #todos > 0 then
+        table.sort(todos, function(a, b) return a.units > b.units end)
+        Log(string.format("✅ Matriz (fallback)! (%d bonecos)", todos[1].units))
+        return todos[1].tabela
     end
 
     return nil
 end
 
 local Matriz = BuscarMatriz()
-if not Matriz then Log("❌ Matriz não encontrada! Você tem algum boneco?") return end
+if not Matriz then Log("❌ Matriz não encontrada!") return end
 Log("✅ Matriz encontrada!")
 
 local function LerQuirkDoBoneco(dadosBoneco)
@@ -432,87 +351,53 @@ end
 
 local listaPersonagens = {}
 SafeCall("ExtrairPersonagens", function()
-    local seuUserId = LocalPlayer.UserId
-    local seuNome = LocalPlayer.Name
+    local total = 0
+    for _ in pairs(Matriz) do total = total + 1 end
+    Log("📊 Total na matriz: " .. total)
 
-    local totalBruto = 0
-    for _ in pairs(Matriz) do totalBruto = totalBruto + 1 end
-
-    local filtrarAgressivo = totalBruto > 500
-
-    if filtrarAgressivo then
-        Log("⚠️ Tabela grande (" .. totalBruto .. "), filtrando...")
-    end
+    local uuidsUsados = {}
 
     for chave, dados in pairs(Matriz) do
         if type(dados) == "table" then
-            local nome = dados.name or dados.Name
-            local uuid = dados.UUID or dados.Id or dados.uid or (type(chave) == "string" and #chave > 20 and chave)
-
-            if uuid and nome then
-                local ehSeu = false
-
-                if uuid == ID_ALVO then
-                    ehSeu = true
-                else
-                    pcall(function()
-                        for k, v in pairs(dados) do
-                            if type(v) == "string" and (v == tostring(seuUserId) or v == seuNome) then
-                                ehSeu = true
-                                return
-                            end
-                            if type(v) == "number" and v == seuUserId then
-                                ehSeu = true
-                                return
-                            end
-                        end
-                    end)
+            local ehUnit = false
+            pcall(function()
+                for k, v in pairs(dados) do
+                    if tostring(k):lower() == "kind" and tostring(v) == "Unit" then
+                        ehUnit = true
+                        return
+                    end
                 end
+            end)
 
-                if ehSeu then
-                    local quirkAtual = LerQuirkDoBoneco(dados)
-                    table.insert(listaPersonagens, {
-                        nome = tostring(nome),
-                        codigo = tostring(uuid),
-                        quirk = quirkAtual,
-                        dadosOriginais = dados
-                    })
+            if ehUnit then
+                local uuid = dados.key or dados.Key or (type(chave) == "string" and chave) or dados.UUID or dados.Id
+                local nome = dados.name or dados.Name
+
+                if uuid and nome then
+                    uuid = tostring(uuid)
+                    nome = tostring(nome)
+
+                    if not uuidsUsados[uuid] then
+                        uuidsUsados[uuid] = true
+                        local quirkAtual = LerQuirkDoBoneco(dados)
+                        table.insert(listaPersonagens, {
+                            nome = nome,
+                            codigo = uuid,
+                            quirk = quirkAtual,
+                            dadosOriginais = dados
+                        })
+                    end
                 end
             end
         end
     end
 
-    Log("📋 Bonecos filtrados: " .. #listaPersonagens .. " (de " .. totalBruto .. " na tabela)")
+    Log("📋 Bonecos Unit extraídos: " .. #listaPersonagens)
 end)
 
 table.sort(listaPersonagens, function(a, b)
     return (a.nome or ""):lower() < (b.nome or ""):lower()
 end)
-
-if #listaPersonagens == 0 then
-    Log("❌ Nenhum personagem SEU encontrado. Tentando fallback...")
-    SafeCall("FallbackPersonagens", function()
-        for chave, dados in pairs(Matriz) do
-            if type(dados) == "table" then
-                local nome = dados.name or dados.Name
-                local uuid = dados.UUID or dados.Id or dados.uid or (type(chave) == "string" and #chave > 20 and chave)
-                if uuid and nome then
-                    local quirkAtual = LerQuirkDoBoneco(dados)
-                    table.insert(listaPersonagens, {
-                        nome = tostring(nome),
-                        codigo = tostring(uuid),
-                        quirk = quirkAtual,
-                        dadosOriginais = dados
-                    })
-                end
-            end
-        end
-    end)
-    table.sort(listaPersonagens, function(a, b)
-        return (a.nome or ""):lower() < (b.nome or ""):lower()
-    end)
-    Log("📋 Fallback: " .. #listaPersonagens .. " bonecos")
-end
 
 if #listaPersonagens == 0 then
     Log("❌ Nenhum personagem. Abortando.")
@@ -556,9 +441,7 @@ SafeCall("CriarGUI", function()
     local sucesso = false
 
     if not USAR_PLAYER_GUI then
-        local ok = pcall(function()
-            ScreenGui.Parent = CoreGui
-        end)
+        local ok = pcall(function() ScreenGui.Parent = CoreGui end)
         if ok and ScreenGui.Parent then
             sucesso = true
             Log("✅ GUI no CoreGui")
@@ -566,21 +449,15 @@ SafeCall("CriarGUI", function()
     end
 
     if not sucesso and playerGui then
-        local ok2, err2 = pcall(function()
-            ScreenGui.Parent = playerGui
-        end)
+        local ok2 = pcall(function() ScreenGui.Parent = playerGui end)
         if ok2 and ScreenGui.Parent then
             sucesso = true
             Log("✅ GUI no PlayerGui")
-        else
-            Log("⚠️ Falha PlayerGui: " .. tostring(err2))
         end
     end
 
     if not sucesso then
-        local ok3 = pcall(function()
-            ScreenGui.Parent = CoreGui
-        end)
+        local ok3 = pcall(function() ScreenGui.Parent = CoreGui end)
         if ok3 and ScreenGui.Parent then
             sucesso = true
             Log("✅ GUI no CoreGui (fallback)")
@@ -625,9 +502,7 @@ local function CliquePuro(botao, callback)
                 toqueInicio = input.Position
                 moveu = false
                 tempoInicio = tick()
-                if Scroll then
-                    scrollPosInicial = Scroll.CanvasPosition
-                end
+                if Scroll then scrollPosInicial = Scroll.CanvasPosition end
             end
         end)
     end)
@@ -638,9 +513,7 @@ local function CliquePuro(botao, callback)
             if input.UserInputType == Enum.UserInputType.MouseMovement
                or input.UserInputType == Enum.UserInputType.Touch then
                 local delta = input.Position - toqueInicio
-                if math.abs(delta.X) > 6 or math.abs(delta.Y) > 6 then
-                    moveu = true
-                end
+                if math.abs(delta.X) > 6 or math.abs(delta.Y) > 6 then moveu = true end
             end
         end)
     end)
@@ -653,17 +526,13 @@ local function CliquePuro(botao, callback)
                 local scrollMoveu = false
                 if Scroll and scrollPosInicial then
                     local deltaScroll = Scroll.CanvasPosition - scrollPosInicial
-                    if math.abs(deltaScroll.X) > 3 or math.abs(deltaScroll.Y) > 3 then
-                        scrollMoveu = true
-                    end
+                    if math.abs(deltaScroll.X) > 3 or math.abs(deltaScroll.Y) > 3 then scrollMoveu = true end
                 end
                 local foiClique = (toqueInicio ~= nil) and (not moveu) and (duracao < 0.6) and (not scrollMoveu)
                 toqueInicio = nil
                 moveu = false
                 scrollPosInicial = nil
-                if foiClique then
-                    callback()
-                end
+                if foiClique then callback() end
             end
         end)
     end)
@@ -737,9 +606,7 @@ do
         pcall(function()
             if input.UserInputType == Enum.UserInputType.MouseButton1
                or input.UserInputType == Enum.UserInputType.Touch then
-                if not bolaMoveu then
-                    Main.Visible = not Main.Visible
-                end
+                if not bolaMoveu then Main.Visible = not Main.Visible end
                 bolaToqueInicio = nil
                 bolaMoveu = false
             end
@@ -960,8 +827,7 @@ for idx, quirkNome in ipairs(QUIRKS_OPCOES) do
     AlvoBtn.Text = "☐ " .. quirkNome
     AlvoBtn.TextColor3 = CORES.texto
     AlvoBtn.TextSize = 8
-    AlvoBtn.Font = Enum.Font.GothamMedium
-    AlvoBtn.BorderSizePixel = 0
+    AlvoBtn.Font = Enum.Font.GothamMedium    AlvoBtn.BorderSizePixel = 0
     AlvoBtn.ZIndex = 4
     AlvoBtn.AutoButtonColor = false
     AlvoBtn.Parent = Linha
@@ -1264,7 +1130,7 @@ end
 
 SafeCall("CriarItens", function()
     local total = math.min(#listaPersonagens, MAX_ITENS)
-    Log("📋 Criando " .. total .. " itens (de " .. #listaPersonagens .. ")")
+    Log("📋 Criando " .. total .. " itens")
 
     for i = 1, total do
         local p = listaPersonagens[i]
@@ -1378,7 +1244,7 @@ end)
 AtualizarContador()
 AtualizarContagemQuirks()
 
-Log("✅ " .. #itens .. " itens criados na lista")
+Log("✅ " .. #itens .. " itens criados")
 
 local IniciarRolagem
 
@@ -1747,6 +1613,5 @@ BtnParar.MouseButton1Click:Connect(function()
     end
 end)
 
-Log("✅ Script carregado com sucesso!")
-Log("📋 Personagens: " .. #listaPersonagens)
-Log("🎨 GUI: " .. tostring(ScreenGui.Parent and ScreenGui.Parent.Name or "SEM PAI"))
+Log("✅ Script carregado!")
+Log("📋 " .. #listaPersonagens .. " bonecos | GUI criada")
