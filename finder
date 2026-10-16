@@ -34,14 +34,20 @@ local function deleteF(name)
     pcall(function() delfile(name) end)
 end
 
+local function markAuto()
+    writeF(AUTO_FILE, tostring(tick()))
+end
+
 local function wasQueued()
     local content = readF(AUTO_FILE)
     deleteF(AUTO_FILE)
-    return content == "1"
-end
-
-local function markAuto()
-    writeF(AUTO_FILE, "1")
+    if not content then return false end
+    local savedTick = tonumber(content)
+    if not savedTick then return false end
+    local currentTick = tick()
+    if currentTick < savedTick then return false end
+    if (currentTick - savedTick) > 30 then return false end
+    return true
 end
 
 local CHECK_INTERVAL = 0.5
