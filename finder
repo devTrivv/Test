@@ -12,7 +12,7 @@ local LocalPlayer = Players.LocalPlayer
 --==========================================================
 -- ⚠️ EDITE AQUI DEPOIS DE SUBIR NO GITHUB:
 -- Copie a URL "Raw" do seu arquivo no GitHub e cole abaixo
-local SCRIPT_URL = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/finder.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/devTrivv/Test/refs/heads/main/finder"
 --==========================================================
 
 --=== DETECÇÃO DO QUEUE_ON_TELEPORT ===--
