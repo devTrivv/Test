@@ -1,6 +1,3 @@
---=== SERVER FINDER - MÉTODO UNIVERSAL (queue_on_teleport) ===--
--- Cole este script no GitHub e depois edite a SCRIPT_URL abaixo
-
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -8,24 +5,10 @@ local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-
---==========================================================
--- ⚠️ EDITE AQUI DEPOIS DE SUBIR NO GITHUB:
--- Copie a URL "Raw" do seu arquivo no GitHub e cole abaixo
 local SCRIPT_URL = "https://raw.githubusercontent.com/devTrivv/Test/refs/heads/main/finder"
---==========================================================
 
---=== DETECÇÃO DO QUEUE_ON_TELEPORT ===--
-local queueteleport_func = queue_on_teleport
-    or (syn and syn.queue_on_teleport)
-    or (fluxus and fluxus.queue_on_teleport)
-    or (codex and codex.queue_on_teleport)
-    or (delta and delta.queue_on_teleport)
-    or queueteleport
+local queueteleport_func = queue_on_teleport or queueteleport
 
---=== DETECÇÃO DE "VEIO DE HOP" ===--
--- Usa um arquivo salvo antes do teleporte. Se o arquivo existe
--- e tá recente, significa que o script foi executado via queue_on_teleport
 local AUTO_FILE = "Workspace/eventfinder_auto.txt"
 local CONFIG_FILE = "Workspace/eventfinder_config.txt"
 
@@ -51,19 +34,16 @@ local function deleteF(name)
     pcall(function() delfile(name) end)
 end
 
--- Checa se o script foi executado após um teleporte
 local function wasQueued()
     local content = readF(AUTO_FILE)
-    deleteF(AUTO_FILE)  -- sempre deleta
+    deleteF(AUTO_FILE)
     return content == "1"
 end
 
--- Marca que vai hopar (salva flag pro próximo servidor)
 local function markAuto()
     writeF(AUTO_FILE, "1")
 end
 
---=== CONFIG ===--
 local CHECK_INTERVAL = 0.5
 local RETRY_DELAY = 1.5
 local TELEPORT_WAIT = 4
@@ -95,7 +75,6 @@ local MODES = {
 local FOUND_COLOR = Color3.fromRGB(255, 215, 0)
 local FOUND_BG = Color3.fromRGB(45, 38, 5)
 
---=== STATE ===--
 local currentModeIndex = 1
 local autoHopEnabled = false
 local isHopping = false
@@ -111,7 +90,6 @@ local btnStrokeRef = nil
 local startJobId = game.JobId
 local lastTeleportError = nil
 
---=== HELPERS DE ARQUIVO ===--
 local function saveMode()
     writeF(CONFIG_FILE, tostring(currentModeIndex))
 end
@@ -126,7 +104,6 @@ local function loadMode()
     end
 end
 
---=== HELPERS ===--
 local function getCurrentEventName()
     return MODES[currentModeIndex].name
 end
@@ -146,7 +123,6 @@ local function updateGuiStatus()
     local b = currentGui:FindFirstChild("FinderButton", true)
     if not b then return end
     local mode = MODES[currentModeIndex]
-    
     if not autoHopEnabled then
         b.Text, b.TextColor3, b.BackgroundColor3 = "SEARCH", Color3.fromRGB(180, 90, 90), Color3.fromRGB(35, 18, 18)
         if btnStrokeRef then btnStrokeRef.Color = mode.stroke end
@@ -165,7 +141,6 @@ end
 local function applyModeColors()
     if not currentGui then return end
     local mode = MODES[currentModeIndex]
-    
     if mainFrameRef then
         local stroke = mainFrameRef:FindFirstChild("MainStroke")
         if stroke then stroke.Color = mode.stroke end
@@ -199,7 +174,6 @@ local function applyModeColors()
     updateGuiStatus()
 end
 
---=== FETCH SERVIDORES ===--
 local function fetchServers()
     local url = string.format(
         "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
@@ -212,34 +186,16 @@ local function fetchServers()
     return {}
 end
 
---=== QUEUE ON TELEPORT ===--
--- Enfileira o script pra rodar automaticamente no próximo servidor
 local function queueNextExecution()
     if not queueteleport_func then return false end
-    
-    -- Marca que vamos hopar (o script do próximo servidor vai ver isso)
     markAuto()
-    
-    -- Monta o código que vai rodar no próximo servidor
-    -- Ele baixa o script do GitHub e executa
-    local codeToRun = string.format([[
-        wait(2)
-        local ok, err = pcall(function()
-            loadstring(game:HttpGet("%s"))()
-        end)
-        if not ok then
-            warn("[FINDER] Erro ao carregar: " .. tostring(err))
-        end
-    ]], SCRIPT_URL)
-    
+    local codeToRun = "wait(2) pcall(function() loadstring(game:HttpGet('" .. SCRIPT_URL .. "'))() end)"
     local success = pcall(function()
         queueteleport_func(codeToRun)
     end)
-    
     return success
 end
 
---=== TELEPORT LISTENER ===--
 TeleportService.TeleportInitFailed:Connect(function(player, result, errMsg)
     if player == LocalPlayer then
         lastTeleportError = tostring(errMsg)
@@ -247,19 +203,14 @@ TeleportService.TeleportInitFailed:Connect(function(player, result, errMsg)
     end
 end)
 
---=== HOP ===--
 local function hopToEventServer()
     if isHopping or not autoHopEnabled then return end
     if findEvent() then return end
-    
-    -- Enfileira o script pro próximo servidor
     queueNextExecution()
     saveMode()
-    
     isHopping = true
     updateGuiStatus()
     setStatus("Carregando lista...", Color3.fromRGB(180, 180, 130))
-    
     local servers = fetchServers()
     local available = {}
     for _, s in ipairs(servers) do
@@ -267,36 +218,28 @@ local function hopToEventServer()
             table.insert(available, s)
         end
     end
-    
     if #available == 0 then
-        setStatus("Sem servidores disponiveis", Color3.fromRGB(200, 100, 100))
+        setStatus("Sem servidores", Color3.fromRGB(200, 100, 100))
         isHopping = false
         updateGuiStatus()
         task.wait(3)
         return
     end
-    
     for i = #available, 2, -1 do
         local j = math.random(i)
         available[i], available[j] = available[j], available[i]
     end
-    
     local total = math.min(#available, MAX_ATTEMPTS)
     setStatus("Iniciando: 0/" .. total, Color3.fromRGB(180, 180, 130))
-    
     for i = 1, total do
         if not autoHopEnabled then break end
         if findEvent() then break end
-        
         local s = available[i]
         setStatus("Tentando: " .. i .. "/" .. total, Color3.fromRGB(180, 180, 130))
-        
         lastTeleportError = nil
-        
         local ok = pcall(function()
             TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
         end)
-        
         if ok then
             local waited = 0
             local teleported = false
@@ -309,29 +252,26 @@ local function hopToEventServer()
                 end
                 if lastTeleportError then break end
             end
-            
             if teleported then
                 setStatus("Conectando...", Color3.fromRGB(150, 200, 150))
                 break
             elseif lastTeleportError then
-                setStatus("Ocupado: " .. lastTeleportError, Color3.fromRGB(200, 130, 90))
+                setStatus("Ocupado", Color3.fromRGB(200, 130, 90))
                 task.wait(RETRY_DELAY)
             else
-                setStatus("Timeout, proximo...", Color3.fromRGB(200, 150, 90))
+                setStatus("Timeout", Color3.fromRGB(200, 150, 90))
                 task.wait(RETRY_DELAY)
             end
         else
-            setStatus("Falha na conexao", Color3.fromRGB(200, 100, 100))
+            setStatus("Falha", Color3.fromRGB(200, 100, 100))
             task.wait(RETRY_DELAY)
         end
     end
-    
     setStatus("Reiniciando...", Color3.fromRGB(130, 130, 135))
     isHopping = false
     updateGuiStatus()
 end
 
---=== LOOP ===--
 local function mainLoop()
     local lastHadEvent = false
     while true do
@@ -350,7 +290,6 @@ local function mainLoop()
     end
 end
 
---=== DRAG ===--
 local function makeDraggable(frame, handle)
     local dragging, dragStart, startPos = false, nil, nil
     handle.InputBegan:Connect(function(input)
@@ -377,16 +316,12 @@ local function makeDraggable(frame, handle)
     end)
 end
 
---=== GUI ===--
 local function createGui()
     if currentGui then currentGui:Destroy() end
-    
     local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
     if not pg then pg = LocalPlayer:WaitForChild("PlayerGui", 10) end
     if not pg then return end
-    
     local mode = MODES[currentModeIndex]
-    
     local sg = Instance.new("ScreenGui")
     sg.Name = "EventFinder"
     sg.ResetOnSpawn = false
@@ -394,9 +329,7 @@ local function createGui()
     sg.DisplayOrder = 999
     sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     sg.Parent = pg
-    
     local shadow = Instance.new("Frame")
-    shadow.Name = "Shadow"
     shadow.Size = UDim2.new(0, 180, 0, 100)
     shadow.Position = UDim2.new(0, 6, 0.5, -41)
     shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -404,13 +337,10 @@ local function createGui()
     shadow.BorderSizePixel = 0
     shadow.ZIndex = 0
     shadow.Parent = sg
-    
-    local shadowCorner = Instance.new("UICorner")
-    shadowCorner.CornerRadius = UDim.new(0, 6)
-    shadowCorner.Parent = shadow
-    
+    local sc = Instance.new("UICorner")
+    sc.CornerRadius = UDim.new(0, 6)
+    sc.Parent = shadow
     local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 180, 0, 100)
     mainFrame.Position = UDim2.new(0, 8, 0.5, -50)
     mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
@@ -419,18 +349,15 @@ local function createGui()
     mainFrame.ZIndex = 1
     mainFrame.Parent = sg
     mainFrameRef = mainFrame
-    
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 6)
-    mainCorner.Parent = mainFrame
-    
-    local mainStroke = Instance.new("UIStroke")
-    mainStroke.Name = "MainStroke"
-    mainStroke.Thickness = 1
-    mainStroke.Color = mode.stroke
-    mainStroke.Transparency = 0.3
-    mainStroke.Parent = mainFrame
-    
+    local mc = Instance.new("UICorner")
+    mc.CornerRadius = UDim.new(0, 6)
+    mc.Parent = mainFrame
+    local ms = Instance.new("UIStroke")
+    ms.Name = "MainStroke"
+    ms.Thickness = 1
+    ms.Color = mode.stroke
+    ms.Transparency = 0.3
+    ms.Parent = mainFrame
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 24)
@@ -439,46 +366,40 @@ local function createGui()
     header.ZIndex = 2
     header.Parent = mainFrame
     headerRef = header
-    
-    local headerCorner = Instance.new("UICorner")
-    headerCorner.CornerRadius = UDim.new(0, 6)
-    headerCorner.Parent = header
-    
-    local headerFix = Instance.new("Frame")
-    headerFix.Name = "HeaderFix"
-    headerFix.Size = UDim2.new(1, 0, 0.5, 0)
-    headerFix.Position = UDim2.new(0, 0, 0.5, 0)
-    headerFix.BackgroundColor3 = mode.headerBg
-    headerFix.BorderSizePixel = 0
-    headerFix.ZIndex = 1
-    headerFix.Parent = header
-    
-    local accentBar = Instance.new("Frame")
-    accentBar.Name = "AccentBar"
-    accentBar.Size = UDim2.new(0, 3, 0, 14)
-    accentBar.Position = UDim2.new(0, 8, 0.5, -7)
-    accentBar.BackgroundColor3 = mode.accent
-    accentBar.BorderSizePixel = 0
-    accentBar.ZIndex = 3
-    accentBar.Parent = header
-    
-    local accentBarCorner = Instance.new("UICorner")
-    accentBarCorner.CornerRadius = UDim.new(0, 1)
-    accentBarCorner.Parent = accentBar
-    
-    local headerLabel = Instance.new("TextLabel")
-    headerLabel.Name = "Title"
-    headerLabel.Size = UDim2.new(1, -20, 1, 0)
-    headerLabel.Position = UDim2.new(0, 16, 0, 0)
-    headerLabel.BackgroundTransparency = 1
-    headerLabel.Text = "SERVER FINDER"
-    headerLabel.TextColor3 = mode.accent
-    headerLabel.TextSize = 10
-    headerLabel.Font = Enum.Font.GothamMedium
-    headerLabel.TextXAlignment = Enum.TextXAlignment.Left
-    headerLabel.ZIndex = 3
-    headerLabel.Parent = header
-    
+    local hc = Instance.new("UICorner")
+    hc.CornerRadius = UDim.new(0, 6)
+    hc.Parent = header
+    local hf = Instance.new("Frame")
+    hf.Name = "HeaderFix"
+    hf.Size = UDim2.new(1, 0, 0.5, 0)
+    hf.Position = UDim2.new(0, 0, 0.5, 0)
+    hf.BackgroundColor3 = mode.headerBg
+    hf.BorderSizePixel = 0
+    hf.ZIndex = 1
+    hf.Parent = header
+    local ab = Instance.new("Frame")
+    ab.Name = "AccentBar"
+    ab.Size = UDim2.new(0, 3, 0, 14)
+    ab.Position = UDim2.new(0, 8, 0.5, -7)
+    ab.BackgroundColor3 = mode.accent
+    ab.BorderSizePixel = 0
+    ab.ZIndex = 3
+    ab.Parent = header
+    local abc = Instance.new("UICorner")
+    abc.CornerRadius = UDim.new(0, 1)
+    abc.Parent = ab
+    local hl = Instance.new("TextLabel")
+    hl.Name = "Title"
+    hl.Size = UDim2.new(1, -20, 1, 0)
+    hl.Position = UDim2.new(0, 16, 0, 0)
+    hl.BackgroundTransparency = 1
+    hl.Text = "SERVER FINDER"
+    hl.TextColor3 = mode.accent
+    hl.TextSize = 10
+    hl.Font = Enum.Font.GothamMedium
+    hl.TextXAlignment = Enum.TextXAlignment.Left
+    hl.ZIndex = 3
+    hl.Parent = header
     local button = Instance.new("TextButton")
     button.Name = "FinderButton"
     button.Size = UDim2.new(1, -20, 0, 26)
@@ -493,41 +414,34 @@ local function createGui()
     button.ZIndex = 2
     button.Parent = mainFrame
     buttonRef = button
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 4)
-    btnCorner.Parent = button
-    
-    local btnStroke = Instance.new("UIStroke")
-    btnStroke.Thickness = 1
-    btnStroke.Color = mode.stroke
-    btnStroke.Transparency = 0.6
-    btnStroke.Parent = button
-    btnStrokeRef = btnStroke
-    
-    local modeFrame = Instance.new("Frame")
-    modeFrame.Name = "ModeFrame"
-    modeFrame.Size = UDim2.new(0, 60, 0, 18)
-    modeFrame.Position = UDim2.new(0, 10, 0, 66)
-    modeFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
-    modeFrame.BorderSizePixel = 0
-    modeFrame.ZIndex = 2
-    modeFrame.Parent = mainFrame
-    modeFrameRef = modeFrame
-    
-    local modeFrameCorner = Instance.new("UICorner")
-    modeFrameCorner.CornerRadius = UDim.new(0, 3)
-    modeFrameCorner.Parent = modeFrame
-    
-    local modeFrameStroke = Instance.new("UIStroke")
-    modeFrameStroke.Name = "ModeStroke"
-    modeFrameStroke.Thickness = 1
-    modeFrameStroke.Color = mode.stroke
-    modeFrameStroke.Transparency = 0.4
-    modeFrameStroke.Parent = modeFrame
-    
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 4)
+    bc.Parent = button
+    local bs = Instance.new("UIStroke")
+    bs.Thickness = 1
+    bs.Color = mode.stroke
+    bs.Transparency = 0.6
+    bs.Parent = button
+    btnStrokeRef = bs
+    local mf = Instance.new("Frame")
+    mf.Name = "ModeFrame"
+    mf.Size = UDim2.new(0, 60, 0, 18)
+    mf.Position = UDim2.new(0, 10, 0, 66)
+    mf.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+    mf.BorderSizePixel = 0
+    mf.ZIndex = 2
+    mf.Parent = mainFrame
+    modeFrameRef = mf
+    local mfc = Instance.new("UICorner")
+    mfc.CornerRadius = UDim.new(0, 3)
+    mfc.Parent = mf
+    local mfs = Instance.new("UIStroke")
+    mfs.Name = "ModeStroke"
+    mfs.Thickness = 1
+    mfs.Color = mode.stroke
+    mfs.Transparency = 0.4
+    mfs.Parent = mf
     modeLabel = Instance.new("TextLabel")
-    modeLabel.Name = "ModeLabel"
     modeLabel.Size = UDim2.new(1, -6, 1, 0)
     modeLabel.Position = UDim2.new(0, 3, 0, 0)
     modeLabel.BackgroundTransparency = 1
@@ -537,14 +451,12 @@ local function createGui()
     modeLabel.Font = Enum.Font.GothamMedium
     modeLabel.TextXAlignment = Enum.TextXAlignment.Center
     modeLabel.ZIndex = 3
-    modeLabel.Parent = modeFrame
-    
+    modeLabel.Parent = mf
     switchBtn = Instance.new("TextButton")
-    switchBtn.Name = "SwitchBtn"
     switchBtn.Size = UDim2.new(0, 24, 0, 18)
     switchBtn.Position = UDim2.new(0, 74, 0, 66)
     switchBtn.BackgroundColor3 = mode.accentDim
-    switchBtn.Text = "⇄"
+    switchBtn.Text = "S"
     switchBtn.TextColor3 = mode.accent
     switchBtn.TextSize = 13
     switchBtn.Font = Enum.Font.GothamMedium
@@ -552,33 +464,27 @@ local function createGui()
     switchBtn.AutoButtonColor = false
     switchBtn.ZIndex = 2
     switchBtn.Parent = mainFrame
-    
-    local switchCorner = Instance.new("UICorner")
-    switchCorner.CornerRadius = UDim.new(0, 3)
-    switchCorner.Parent = switchBtn
-    
-    local switchStroke = Instance.new("UIStroke")
-    switchStroke.Name = "SwitchStroke"
-    switchStroke.Thickness = 1
-    switchStroke.Color = mode.stroke
-    switchStroke.Transparency = 0.4
-    switchStroke.Parent = switchBtn
-    
-    local statusFrame = Instance.new("Frame")
-    statusFrame.Name = "StatusFrame"
-    statusFrame.Size = UDim2.new(1, -20, 0, 12)
-    statusFrame.Position = UDim2.new(0, 10, 0, 86)
-    statusFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 9)
-    statusFrame.BorderSizePixel = 0
-    statusFrame.ZIndex = 2
-    statusFrame.Parent = mainFrame
-    
-    local statusCorner = Instance.new("UICorner")
-    statusCorner.CornerRadius = UDim.new(0, 2)
-    statusCorner.Parent = statusFrame
-    
+    local swc = Instance.new("UICorner")
+    swc.CornerRadius = UDim.new(0, 3)
+    swc.Parent = switchBtn
+    local sws = Instance.new("UIStroke")
+    sws.Name = "SwitchStroke"
+    sws.Thickness = 1
+    sws.Color = mode.stroke
+    sws.Transparency = 0.4
+    sws.Parent = switchBtn
+    local sf = Instance.new("Frame")
+    sf.Name = "StatusFrame"
+    sf.Size = UDim2.new(1, -20, 0, 12)
+    sf.Position = UDim2.new(0, 10, 0, 86)
+    sf.BackgroundColor3 = Color3.fromRGB(8, 8, 9)
+    sf.BorderSizePixel = 0
+    sf.ZIndex = 2
+    sf.Parent = mainFrame
+    local sfc = Instance.new("UICorner")
+    sfc.CornerRadius = UDim.new(0, 2)
+    sfc.Parent = sf
     statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "Status"
     statusLabel.Size = UDim2.new(1, -6, 1, 0)
     statusLabel.Position = UDim2.new(0, 3, 0, 0)
     statusLabel.BackgroundTransparency = 1
@@ -589,9 +495,8 @@ local function createGui()
     statusLabel.TextXAlignment = Enum.TextXAlignment.Left
     statusLabel.TextTruncate = Enum.TextTruncate.AtEnd
     statusLabel.ZIndex = 3
-    statusLabel.Parent = statusFrame
-    
-    local function switchMode()
+    statusLabel.Parent = sf
+    switchBtn.MouseButton1Click:Connect(function()
         currentModeIndex = currentModeIndex + 1
         if currentModeIndex > #MODES then
             currentModeIndex = 1
@@ -604,10 +509,7 @@ local function createGui()
         if autoHopEnabled and not findEvent() then
             task.spawn(hopToEventServer)
         end
-    end
-    
-    switchBtn.MouseButton1Click:Connect(switchMode)
-    
+    end)
     button.MouseButton1Click:Connect(function()
         if autoHopEnabled then
             autoHopEnabled = false
@@ -622,14 +524,11 @@ local function createGui()
             end
         end
     end)
-    
     makeDraggable(mainFrame, header)
-    
     currentGui = sg
     applyModeColors()
 end
 
---=== MONITOR ===--
 for _, mode in ipairs(MODES) do
     Workspace.ChildAdded:Connect(function(child)
         if child.Name == mode.name and getCurrentEventName() == mode.name then
@@ -649,13 +548,10 @@ Workspace.ChildRemoved:Connect(function(child)
             end
             break
         end
-    end)
+    end
 end)
 
---=== START ===--
 loadMode()
-
--- Detecta se o script foi executado pelo queue_on_teleport
 local fromQueue = wasQueued()
 
 createGui()
