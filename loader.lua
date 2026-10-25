@@ -387,6 +387,7 @@ local QUIRKS_OPCOES = {
     "Fortune's Favor",
     "Prodigy",
     "Tycoon",
+   "Sovereign",
 }
 local quirksMarcadas = {}
 local quirksTravadas = {}
